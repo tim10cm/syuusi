@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パチンコ・スロット収支管理App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .plus-color { color: #10b981; }
+        .minus-color { color: #f43f5e; }
+        .bg-plus { background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
+        .bg-minus { background-color: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.3); }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-card border-b border-slate-700/50 px-4 py-3 flex justify-between items-center">
+        <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            <i class="fa-solid fa-coins mr-2 text-emerald-400"></i>収支カウンター
+        </h1>
+        <button onclick="exportCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> CSV出力
+        </button>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
+        <!-- 集計サマリー -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs font-semibold text-slate-400 tracking-wider">TOTAL BALANCE</span>
+                <div class="flex bg-slate-800/80 p-0.5 rounded-lg text-xs">
+                    <button onclick="setFilter('month')" id="btn-month" class="px-2.5 py-1 rounded-md transition font-medium">今月</button>
+                    <button onclick="setFilter('year')" id="btn-year" class="px-2.5 py-1 rounded-md transition font-medium">今年</button>
+                    <button onclick="setFilter('all')" id="btn-all" class="px-2.5 py-1 rounded-md transition font-medium">全期間</button>
+                </div>
+            </div>
+            
+            <div class="text-center my-2">
+                <div id="total-balance" class="text-3xl font-black tracking-tight">¥0</div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-700/50 text-center text-xs">
+                <div>
+                    <div class="text-slate-400">稼働日数</div>
+                    <div id="stat-days" class="font-bold text-sm text-slate-200 mt-0.5">0日</div>
+                </div>
+                <div>
+                    <div class="text-slate-400">勝率</div>
+                    <div id="stat-winrate" class="font-bold text-sm text-slate-200 mt-0.5">0%</div>
+                </div>
+                <div>
+                    <div class="text-slate-400">回収率</div>
+                    <div id="stat-recovery" class="font-bold text-sm text-slate-200 mt-0.5">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表示切替タブ -->
+        <div class="flex bg-slate-800/80 p-1 rounded-xl text-xs font-medium border border-slate-700/50">
+            <button onclick="setViewMode('calendar')" id="view-btn-calendar" class="flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                <i class="fa-regular fa-calendar-days"></i> カレンダー
+            </button>
+            <button onclick="setViewMode('list')" id="view-btn-list" class="flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-list-ul"></i> 履歴リスト
+            </button>
+        </div>
+
+        <!-- カレンダー表示エリア -->
+        <div id="view-calendar" class="space-y-4">
+            <div class="glass-card rounded-2xl p-4 shadow-xl relative overflow-hidden">
+                <!-- 背景グラフ -->
+                <div class="absolute inset-0 pointer-events-none opacity-20 z-0 p-2">
+                    <canvas id="bgChart" class="w-full h-full"></canvas>
+                </div>
+
+                <!-- カレンダーコンテンツ (前面) -->
+                <div class="relative z-10">
+                    <div class="flex justify-between items-center mb-4">
+                        <button onclick="changeMonth(-1)" class="p-2 text-slate-400 hover:text-white transition"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h2 id="calendar-month-title" class="font-bold text-slate-200">2026年 11月</h2>
+                        <button onclick="changeMonth(1)" class="p-2 text-slate-400 hover:text-white transition"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400 mb-2">
+                        <div class="text-rose-400">日</div>
+                        <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div>
+                        <div class="text-sky-400">土</div>
+                    </div>
+
+                    <div id="calendar-days" class="grid grid-cols-7 gap-1 text-xs"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 履歴リストエリア -->
+        <div id="view-list" class="space-y-3 hidden">
+            <div id="history-container" class="space-y-2.5"></div>
+        </div>
+    </main>
+
+    <!-- Floating Action Button -->
+    <button onclick="openModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg shadow-emerald-500/30 flex items-center justify-center text-white text-2xl font-bold hover:scale-105 active:scale-95 transition z-40">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- 入力モーダル -->
+    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden">
+        <div class="glass-card w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border-t border-slate-700">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                <h3 class="font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-emerald-400"></i> 収支を入力
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="record-form" onsubmit="saveRecord(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">日付</label>
+                    <input type="date" id="input-date" required class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-400 mb-1">店舗名</label>
+                        <input type="text" id="input-shop" placeholder="〇〇店" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">機種名</label>
+                        <input type="text" id="input-machine" placeholder="北斗 / ジャグラー" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <!-- 計算モード切り替え -->
+                <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                    <button type="button" onclick="setCalcMode('direct')" id="mode-direct" class="flex-1 py-1.5 rounded-lg transition font-medium">金額で直接入力</button>
+                    <button type="button" onclick="setCalcMode('count')" id="mode-count" class="flex-1 py-1.5 rounded-lg transition font-medium">枚数・玉数で計算</button>
+                </div>
+
+                <!-- 金額入力モード -->
+                <div id="section-direct" class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-400 mb-1">投資額 (円)</label>
+                        <input type="number" id="input-invest-yen" step="1000" placeholder="10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">回収額 (円)</label>
+                        <input type="number" id="input-collect-yen" step="500" placeholder="25000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <!-- 枚数計算モード -->
+                <div id="section-count" class="space-y-3 hidden">
+                    <div>
+                        <label class="block text-slate-400 mb-1">レート設定</label>
+                        <select id="input-rate" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <option value="20-46">21.73円スロ (46枚/1000円)</option>
+                            <option value="20-50">20円スロ (50枚/1000円)</option>
+                            <option value="5">5円スロ</option>
+                            <option value="4">4円パチンコ</option>
+                            <option value="1">1円パチンコ</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-slate-400 mb-1">投資額 (円)</label>
+                            <input type="number" id="input-invest-count-yen" step="1000" placeholder="10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">回収 (枚・玉)</label>
+                            <input type="number" id="input-collect-count" placeholder="1250" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 mb-1">メモ</label>
+                    <input type="text" id="input-memo" placeholder="設定4以上確定、天井狙い等" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 font-bold text-white rounded-xl shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition mt-2 text-sm">
+                    保存する
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let records = JSON.parse(localStorage.getItem('pachi_records') || '[]');
+        let currentFilter = 'month';
+        let currentView = 'calendar';
+        let currentCalcMode = 'direct';
+        let currentDate = new Date();
+        let bgChartInstance = null;
+
+        document.getElementById('input-date').valueAsDate = new Date();
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['month', 'year', 'all'].forEach(f => {
+                const btn = document.getElementById(`btn-${f}`);
+                if (f === filter) {
+                    btn.className = "px-2.5 py-1 rounded-md transition font-medium bg-emerald-500 text-white shadow-sm";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-md transition font-medium text-slate-400 hover:text-slate-200";
+                }
+            });
+            updateStats();
+        }
+
+        function setViewMode(mode) {
+            currentView = mode;
+            const btnCal = document.getElementById('view-btn-calendar');
+            const btnList = document.getElementById('view-btn-list');
+            const viewCal = document.getElementById('view-calendar');
+            const viewList = document.getElementById('view-list');
+
+            if (mode === 'calendar') {
+                btnCal.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-sm";
+                btnList.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
+                viewCal.classList.remove('hidden');
+                viewList.classList.add('hidden');
+                renderCalendar();
+            } else {
+                btnList.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-sm";
+                btnCal.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
+                viewList.classList.remove('hidden');
+                viewCal.classList.add('hidden');
+                renderList();
+            }
+        }
+
+        function setCalcMode(mode) {
+            currentCalcMode = mode;
+            const btnDirect = document.getElementById('mode-direct');
+            const btnCount = document.getElementById('mode-count');
+            const secDirect = document.getElementById('section-direct');
+            const secCount = document.getElementById('section-count');
+
+            if (mode === 'direct') {
+                btnDirect.className = "flex-1 py-1.5 rounded-lg transition font-medium bg-slate-700 text-slate-100 shadow-sm";
+                btnCount.className = "flex-1 py-1.5 rounded-lg transition font-medium text-slate-400 hover:text-slate-200";
+                secDirect.classList.remove('hidden');
+                secCount.classList.add('hidden');
+            } else {
+                btnCount.className = "flex-1 py-1.5 rounded-lg transition font-medium bg-slate-700 text-slate-100 shadow-sm";
+                btnDirect.className = "flex-1 py-1.5 rounded-lg transition font-medium text-slate-400 hover:text-slate-200";
+                secCount.classList.remove('hidden');
+                secDirect.classList.add('hidden');
+            }
+        }
+
+        function getFilteredRecords() {
+            const now = new Date();
+            return records.filter(r => {
+                const d = new Date(r.date);
+                if (currentFilter === 'month') {
+                    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+                } else if (currentFilter === 'year') {
+                    return d.getFullYear() === now.getFullYear();
+                }
+                return true;
+            });
+        }
+
+        function updateStats() {
+            const filtered = getFilteredRecords();
+            const total = filtered.reduce((acc, r) => acc + r.balance, 0);
+            const totalInvest = filtered.reduce((acc, r) => acc + r.invest, 0);
+            const totalCollect = filtered.reduce((acc, r) => acc + r.collect, 0);
+            const wins = filtered.filter(r => r.balance > 0).length;
+
+            const balEl = document.getElementById('total-balance');
+            balEl.textContent = `${total >= 0 ? '+' : ''}${total.toLocaleString()}円`;
+            balEl.className = `text-3xl font-black tracking-tight ${total >= 0 ? 'plus-color' : 'minus-color'}`;
+
+            document.getElementById('stat-days').textContent = `${filtered.length}日`;
+            document.getElementById('stat-winrate').textContent = filtered.length ? `${Math.round((wins / filtered.length) * 100)}%` : '0%';
+            document.getElementById('stat-recovery').textContent = totalInvest ? `${Math.round((totalCollect / totalInvest) * 100)}%` : '0%';
+
+            if (currentView === 'calendar') renderCalendar();
+            else renderList();
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            document.getElementById('calendar-month-title').textContent = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            const container = document.getElementById('calendar-days');
+            container.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                container.appendChild(document.createElement('div'));
+            }
+
+            const monthRecords = records.filter(r => {
+                const d = new Date(r.date);
+                return d.getFullYear() === year && d.getMonth() === month;
+            });
+
+            const dailyStats = {};
+            monthRecords.forEach(r => {
+                const day = new Date(r.date).getDate();
+                dailyStats[day] = (dailyStats[day] || 0) + r.balance;
+            });
+
+            for (let day = 1; day <= lastDate; day++) {
+                const cell = document.createElement('div');
+                const hasData = dailyStats[day] !== undefined;
+                const bal = dailyStats[day] || 0;
+
+                cell.className = `min-h-[52px] p-1 rounded-xl border flex flex-col justify-between transition ${
+                    hasData 
+                        ? (bal >= 0 ? 'bg-plus' : 'bg-minus') 
+                        : 'bg-slate-800/30 border-slate-800 text-slate-500'
+                }`;
+
+                cell.innerHTML = `
+                    <span class="font-semibold text-[10px] ${hasData ? 'text-slate-200' : ''}">${day}</span>
+                    ${hasData ? `<span class="text-[9px] font-bold ${bal >= 0 ? 'plus-color' : 'minus-color'} truncate">${bal > 0 ? '+' : ''}${Math.round(bal/1000)}k</span>` : ''}
+                `;
+
+                container.appendChild(cell);
+            }
+
+            renderBgChart(year, month, lastDate, dailyStats);
+        }
+
+        function renderBgChart(year, month, lastDate, dailyStats) {
+            const ctx = document.getElementById('bgChart').getContext('2d');
+            const labels = Array.from({length: lastDate}, (_, i) => i + 1);
+            
+            let cumulative = 0;
+            const data = labels.map(day => {
+                if (dailyStats[day] !== undefined) cumulative += dailyStats[day];
+                return cumulative;
+            });
+
+            if (bgChartInstance) bgChartInstance.destroy();
+
+            const isPositive = cumulative >= 0;
+            const strokeColor = isPositive ? '#10b981' : '#f43f5e';
+            const fillColor = isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)';
+
+            bgChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        borderColor: strokeColor,
+                        borderWidth: 2,
+                        backgroundColor: fillColor,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderList() {
+            const container = document.getElementById('history-container');
+            const filtered = getFilteredRecords().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">データが登録されていません</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(r => `
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between text-xs">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400 font-mono">${r.date}</span>
+                            ${r.shop ? `<span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">${r.shop}</span>` : ''}
+                            ${r.machine ? `<span class="bg-emerald-950 text-emerald-300 border border-emerald-800/50 px-2 py-0.5 rounded text-[10px]">${r.machine}</span>` : ''}
+                        </div>
+                        ${r.memo ? `<div class="text-slate-400 text-[11px]">${r.memo}</div>` : ''}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="font-bold text-sm ${r.balance >= 0 ? 'plus-color' : 'minus-color'}">
+                                ${r.balance >= 0 ? '+' : ''}${r.balance.toLocaleString()}円
+                            </div>
+                            <div class="text-[10px] text-slate-500">投 ${r.invest.toLocaleString()} / 回 ${r.collect.toLocaleString()}</div>
+                        </div>
+                        <button onclick="deleteRecord('${r.id}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveRecord(e) {
+            e.preventDefault();
+            const date = document.getElementById('input-date').value;
+            const shop = document.getElementById('input-shop').value;
+            const machine = document.getElementById('input-machine').value;
+            const memo = document.getElementById('input-memo').value;
+
+            let invest = 0;
+            let collect = 0;
+
+            if (currentCalcMode === 'direct') {
+                invest = parseInt(document.getElementById('input-invest-yen').value) || 0;
+                collect = parseInt(document.getElementById('input-collect-yen').value) || 0;
+            } else {
+                invest = parseInt(document.getElementById('input-invest-count-yen').value) || 0;
+                const count = parseInt(document.getElementById('input-collect-count').value) || 0;
+                const rate = document.getElementById('input-rate').value;
+
+                if (rate === '20-46') collect = count * 21.73;
+                else if (rate === '20-50') collect = count * 20;
+                else if (rate === '5') collect = count * 5;
+                else if (rate === '4') collect = count * 4;
+                else if (rate === '1') collect = count * 1;
+
+                collect = Math.floor(collect);
+            }
+
+            const record = {
+                id: Date.now().toString(),
+                date, shop, machine, invest, collect,
+                balance: collect - invest,
+                memo
+            };
+
+            records.push(record);
+            localStorage.setItem('pachi_records', JSON.stringify(records));
+            closeModal();
+            updateStats();
+            document.getElementById('record-form').reset();
+            document.getElementById('input-date').valueAsDate = new Date();
+        }
+
+        function deleteRecord(id) {
+            if (confirm('この記録を削除しますか？')) {
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem('pachi_records', JSON.stringify(records));
+                updateStats();
+            }
+        }
+
+        function exportCSV() {
+            if (records.length === 0) return alert('出力するデータがありません。');
+            
+            const headers = ['日付', '店舗名', '機種名', '投資額(円)', '回収額(円)', '収支(円)', 'メモ'];
+            const rows = records.map(r => [
+                r.date,
+                `"${r.shop || ''}"`,
+                `"${r.machine || ''}"`,
+                r.invest,
+                r.collect,
+                r.balance,
+                `"${r.memo || ''}"`
+            ]);
+
+            const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `収支管理_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        // 初期化処理
+        setFilter('month');
+        setViewMode('calendar');
+        setCalcMode('direct');
+    </script>
+</body>
+</html>
