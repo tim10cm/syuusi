@@ -2,500 +2,962 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パチンコ・スロット収支管理App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎰 パチスロ換金計算＆収支管理</title>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .plus-color { color: #10b981; }
-        .minus-color { color: #f43f5e; }
-        .bg-plus { background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
-        .bg-minus { background-color: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.3); }
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151c2f;
+            --accent-gold: #f59e0b;
+            --accent-blue: #00f0ff;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #263353;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 12px;
+            max-width: 480px;
+            margin: 0 auto;
+            padding-bottom: 40px;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-sub);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--border-color);
+            color: var(--accent-gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: linear-gradient(145deg, var(--card-bg), #111726);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group { margin-bottom: 10px; }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        input[type="text"], input[type="number"], input[type="date"], select {
+            width: 100%;
+            background-color: #0b0f19;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            outline: none;
+        }
+
+        input:focus, select:focus { border-color: var(--accent-blue); }
+
+        .quick-btns {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .q-btn {
+            background-color: #1e293b;
+            color: var(--accent-blue);
+            border: 1px solid var(--border-color);
+            padding: 6px 2px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .q-btn.active-filter {
+            background-color: var(--accent-gold);
+            color: #0b0f19;
+            border-color: var(--accent-gold);
+        }
+
+        .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+        .btn {
+            flex: 1;
+            background-color: #263353;
+            color: var(--text-main);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #38bdf8, #00f0ff); color: #0b0f19; }
+        .btn-success { background: linear-gradient(135deg, #34d399, #10b981); color: #0b0f19; }
+        .btn-danger { background-color: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.4); }
+
+        .result-main {
+            text-align: center;
+            padding: 8px 0 12px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .result-label { font-size: 0.8rem; color: var(--text-sub); }
+        .result-val { font-size: 2.2rem; font-weight: bold; color: var(--accent-gold); margin: 2px 0; }
+
+        .prize-breakdown {
+            display: flex;
+            justify-content: space-around;
+            margin: 12px 0;
+            background-color: #0b0f19;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .prize-item { text-align: center; }
+        .prize-count { font-size: 1.1rem; font-weight: bold; color: var(--accent-blue); }
+        .prize-name { font-size: 0.65rem; color: var(--text-sub); margin-top: 2px; }
+
+        .advice-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-green);
+            color: #34d399;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .cal-head { font-size: 0.7rem; color: var(--text-sub); padding: 4px 0; }
+        .cal-day {
+            background-color: #0b0f19;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            min-height: 52px;
+            padding: 3px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .cal-day:hover { border-color: var(--accent-blue); }
+        .cal-date { font-size: 0.65rem; color: var(--text-sub); text-align: left; }
+        .cal-val { font-size: 0.6rem; font-weight: bold; line-height: 1; word-break: break-all; }
+
+        .chart-wrapper {
+            background-color: #0b0f19;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 10px 10px 10px;
+            margin-top: 6px;
+        }
+        .line-chart-svg { width: 100%; height: 140px; overflow: visible; }
+        .chart-labels-row { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 4px; }
+        .chart-x-label { font-size: 0.65rem; color: var(--text-sub); text-align: center; flex: 1; }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-date { font-size: 0.75rem; color: var(--text-sub); }
+        .log-memo { font-size: 0.7rem; color: var(--text-sub); }
+        .log-profit { font-size: 1rem; font-weight: bold; }
+        .plus { color: var(--accent-green); }
+        .minus { color: var(--accent-red); }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+        .stat-box { background: #0b0f19; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; margin-top: 4px; }
+        .custom-prize-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000;
+            padding: 16px;
+        }
+        .modal-content {
+            background: var(--card-bg); border: 1px solid var(--border-color); width: 100%; max-width: 400px;
+            border-radius: 14px; padding: 16px; max-height: 80vh; overflow-y: auto;
+        }
     </style>
 </head>
-<body class="pb-24">
+<body>
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('calc')">🎰 換金計算</button>
+        <button class="tab-btn" onclick="switchTab('calendar')">📅 カレンダー</button>
+        <button class="tab-btn" onclick="switchTab('history')">📜 履歴</button>
+        <button class="tab-btn" onclick="switchTab('settings')">⚙️ 設定</button>
+    </div>
 
-    <!-- Header -->
-    <header class="sticky top-0 z-50 glass-card border-b border-slate-700/50 px-4 py-3 flex justify-between items-center">
-        <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-            <i class="fa-solid fa-coins mr-2 text-emerald-400"></i>収支カウンター
-        </h1>
-        <button onclick="exportCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1">
-            <i class="fa-solid fa-file-csv text-emerald-400"></i> CSV出力
-        </button>
-    </header>
+    <!-- 1. 計算機 -->
+    <div id="tab-calc" class="tab-content active">
+        <div class="card">
+            <div class="input-group" style="margin-bottom:0;">
+                <label style="color: var(--accent-gold);">🏪 マイホール選択</label>
+                <select id="store-select"></select>
+            </div>
+        </div>
 
-    <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
-        <!-- 集計サマリー -->
-        <div class="glass-card rounded-2xl p-4 shadow-xl">
-            <div class="flex justify-between items-center mb-3">
-                <span class="text-xs font-semibold text-slate-400 tracking-wider">TOTAL BALANCE</span>
-                <div class="flex bg-slate-800/80 p-0.5 rounded-lg text-xs">
-                    <button onclick="setFilter('month')" id="btn-month" class="px-2.5 py-1 rounded-md transition font-medium">今月</button>
-                    <button onclick="setFilter('year')" id="btn-year" class="px-2.5 py-1 rounded-md transition font-medium">今年</button>
-                    <button onclick="setFilter('all')" id="btn-all" class="px-2.5 py-1 rounded-md transition font-medium">全期間</button>
+        <div class="card">
+            <div class="input-group">
+                <label id="input-label">獲得枚数 (枚)</label>
+                <input type="number" id="count-input" placeholder="0" inputmode="numeric">
+                <div class="quick-btns">
+                    <button class="q-btn" onclick="addCount(100)">+100</button>
+                    <button class="q-btn" onclick="addCount(500)">+500</button>
+                    <button class="q-btn" onclick="addCount(1000)">+1000</button>
+                    <button class="q-btn" onclick="clearCount()">クリア</button>
                 </div>
             </div>
-            
-            <div class="text-center my-2">
-                <div id="total-balance" class="text-3xl font-black tracking-tight">¥0</div>
-            </div>
 
-            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-700/50 text-center text-xs">
-                <div>
-                    <div class="text-slate-400">稼働日数</div>
-                    <div id="stat-days" class="font-bold text-sm text-slate-200 mt-0.5">0日</div>
-                </div>
-                <div>
-                    <div class="text-slate-400">勝率</div>
-                    <div id="stat-winrate" class="font-bold text-sm text-slate-200 mt-0.5">0%</div>
-                </div>
-                <div>
-                    <div class="text-slate-400">回収率</div>
-                    <div id="stat-recovery" class="font-bold text-sm text-slate-200 mt-0.5">0%</div>
+            <div class="input-group" style="margin-top: 12px;">
+                <label>投資額 (円)</label>
+                <input type="number" id="investment-input" placeholder="0" inputmode="numeric">
+                <div class="quick-btns">
+                    <button class="q-btn" onclick="addInvest(1000)">+1千</button>
+                    <button class="q-btn" onclick="addInvest(5000)">+5千</button>
+                    <button class="q-btn" onclick="addInvest(10000)">+1万</button>
+                    <button class="q-btn" onclick="clearInvest()">クリア</button>
                 </div>
             </div>
         </div>
 
-        <!-- 表示切替タブ -->
-        <div class="flex bg-slate-800/80 p-1 rounded-xl text-xs font-medium border border-slate-700/50">
-            <button onclick="setViewMode('calendar')" id="view-btn-calendar" class="flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
-                <i class="fa-regular fa-calendar-days"></i> カレンダー
+        <div class="card">
+            <div class="result-main">
+                <div class="result-label">換金予定額</div>
+                <div class="result-val" id="exchange-total">¥0</div>
+                <div class="result-label" id="profit-loss">差引収支: ±¥0</div>
+            </div>
+
+            <div class="prize-breakdown">
+                <div class="prize-item"><div class="prize-count" id="count-large">0</div><div class="prize-name" id="label-large">大景品</div></div>
+                <div class="prize-item"><div class="prize-count" id="count-medium">0</div><div class="prize-name" id="label-medium">中景品</div></div>
+                <div class="prize-item"><div class="prize-count" id="count-small">0</div><div class="prize-name" id="label-small">小景品</div></div>
+                <div class="prize-item"><div class="prize-count" id="count-rest">0</div><div class="prize-name">余り</div></div>
+            </div>
+
+            <div class="advice-box" id="advice-text">枚数または玉数を入力してください</div>
+
+            <div class="input-group" style="margin-top: 12px;">
+                <label>日付</label>
+                <input type="date" id="log-date-input">
+            </div>
+
+            <div class="input-group">
+                <label>機種名・メモ</label>
+                <input type="text" id="log-memo-input" placeholder="例: 北斗の拳">
+            </div>
+
+            <button class="btn btn-success" style="width:100%; margin-top: 8px;" onclick="saveRecordFromCalc()">
+                📝 この内容を収支表に記録する
             </button>
-            <button onclick="setViewMode('list')" id="view-btn-list" class="flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-list-ul"></i> 履歴リスト
-            </button>
-        </div>
-
-        <!-- カレンダー表示エリア -->
-        <div id="view-calendar" class="space-y-4">
-            <div class="glass-card rounded-2xl p-4 shadow-xl relative overflow-hidden">
-                <!-- 背景グラフ -->
-                <div class="absolute inset-0 pointer-events-none opacity-20 z-0 p-2">
-                    <canvas id="bgChart" class="w-full h-full"></canvas>
-                </div>
-
-                <!-- カレンダーコンテンツ (前面) -->
-                <div class="relative z-10">
-                    <div class="flex justify-between items-center mb-4">
-                        <button onclick="changeMonth(-1)" class="p-2 text-slate-400 hover:text-white transition"><i class="fa-solid fa-chevron-left"></i></button>
-                        <h2 id="calendar-month-title" class="font-bold text-slate-200">2026年 11月</h2>
-                        <button onclick="changeMonth(1)" class="p-2 text-slate-400 hover:text-white transition"><i class="fa-solid fa-chevron-right"></i></button>
-                    </div>
-
-                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400 mb-2">
-                        <div class="text-rose-400">日</div>
-                        <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div>
-                        <div class="text-sky-400">土</div>
-                    </div>
-
-                    <div id="calendar-days" class="grid grid-cols-7 gap-1 text-xs"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 履歴リストエリア -->
-        <div id="view-list" class="space-y-3 hidden">
-            <div id="history-container" class="space-y-2.5"></div>
-        </div>
-    </main>
-
-    <!-- Floating Action Button -->
-    <button onclick="openModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg shadow-emerald-500/30 flex items-center justify-center text-white text-2xl font-bold hover:scale-105 active:scale-95 transition z-40">
-        <i class="fa-solid fa-plus"></i>
-    </button>
-
-    <!-- 入力モーダル -->
-    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden">
-        <div class="glass-card w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border-t border-slate-700">
-            <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
-                <h3 class="font-bold text-slate-100 flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-emerald-400"></i> 収支を入力
-                </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <form id="record-form" onsubmit="saveRecord(event)" class="space-y-3 text-xs">
-                <div>
-                    <label class="block text-slate-400 mb-1">日付</label>
-                    <input type="date" id="input-date" required class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-slate-400 mb-1">店舗名</label>
-                        <input type="text" id="input-shop" placeholder="〇〇店" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">機種名</label>
-                        <input type="text" id="input-machine" placeholder="北斗 / ジャグラー" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                    </div>
-                </div>
-
-                <!-- 計算モード切り替え -->
-                <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
-                    <button type="button" onclick="setCalcMode('direct')" id="mode-direct" class="flex-1 py-1.5 rounded-lg transition font-medium">金額で直接入力</button>
-                    <button type="button" onclick="setCalcMode('count')" id="mode-count" class="flex-1 py-1.5 rounded-lg transition font-medium">枚数・玉数で計算</button>
-                </div>
-
-                <!-- 金額入力モード -->
-                <div id="section-direct" class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-slate-400 mb-1">投資額 (円)</label>
-                        <input type="number" id="input-invest-yen" step="1000" placeholder="10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">回収額 (円)</label>
-                        <input type="number" id="input-collect-yen" step="500" placeholder="25000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                    </div>
-                </div>
-
-                <!-- 枚数計算モード -->
-                <div id="section-count" class="space-y-3 hidden">
-                    <div>
-                        <label class="block text-slate-400 mb-1">レート設定</label>
-                        <select id="input-rate" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                            <option value="20-46">21.73円スロ (46枚/1000円)</option>
-                            <option value="20-50">20円スロ (50枚/1000円)</option>
-                            <option value="5">5円スロ</option>
-                            <option value="4">4円パチンコ</option>
-                            <option value="1">1円パチンコ</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-slate-400 mb-1">投資額 (円)</label>
-                            <input type="number" id="input-invest-count-yen" step="1000" placeholder="10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">回収 (枚・玉)</label>
-                            <input type="number" id="input-collect-count" placeholder="1250" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-slate-400 mb-1">メモ</label>
-                    <input type="text" id="input-memo" placeholder="設定4以上確定、天井狙い等" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-emerald-500">
-                </div>
-
-                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 font-bold text-white rounded-xl shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition mt-2 text-sm">
-                    保存する
-                </button>
-            </form>
         </div>
     </div>
 
+    <!-- 2. カレンダー・分析 -->
+    <div id="tab-calendar" class="tab-content">
+        <div class="filter-bar">
+            <button class="q-btn active-filter" id="btn-filter-year" onclick="setStatsFilter('year')" style="padding:8px; font-size:0.8rem;">📅 今年 (<span id="current-year-label"></span>)</button>
+            <button class="q-btn" id="btn-filter-all" onclick="setStatsFilter('all')" style="padding:8px; font-size:0.8rem;">📂 今まですべて</button>
+        </div>
+
+        <div class="card">
+            <div class="calendar-header">
+                <button class="q-btn" onclick="changeMonth(-1)">◀ 前月</button>
+                <span id="cal-month-title" style="font-weight:bold; color:var(--accent-gold);"></span>
+                <button class="q-btn" onclick="changeMonth(1)">次月 ▶</button>
+            </div>
+            <div style="font-size:0.65rem; color:var(--text-sub); text-align:center; margin-bottom:6px;">💡 日付をタップするとその日の収支を確認・追加できます</div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span id="chart-title-text">📈 収支推移グラフ</span></div>
+            <div class="chart-wrapper">
+                <div id="line-chart-container"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span id="stats-title-text">📊 アナリティクス</span></div>
+            <div class="stat-grid">
+                <div class="stat-box"><div class="result-label">期間収支</div><div class="stat-val" id="stat-total">¥0</div></div>
+                <div class="stat-box"><div class="result-label">勝率</div><div class="stat-val" id="stat-winrate" style="color:var(--accent-blue);">0%</div></div>
+                <div class="stat-box"><div class="result-label">対戦成績</div><div class="stat-val" id="stat-games" style="font-size:1rem;">0勝 0敗</div></div>
+                <div class="stat-box"><div class="result-label">平均収支 / 回</div><div class="stat-val" id="stat-avg" style="font-size:1rem;">¥0</div></div>
+            </div>
+        </div>
+    </div>
+    <!-- 3. 履歴・絞り込み -->
+    <div id="tab-history" class="tab-content">
+        <div class="card">
+            <div class="card-title">🔍 絞り込み検索</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="input-group" style="margin-bottom:0;">
+                    <label>店舗で絞り込み</label>
+                    <select id="filter-store" onchange="renderHistory()">
+                        <option value="">すべての店舗</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom:0;">
+                    <label>機種で絞り込み</label>
+                    <select id="filter-memo" onchange="renderHistory()">
+                        <option value="">すべての機種</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span id="history-count-label">📜 実戦記録</span>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.7rem;" onclick="exportCSV()">CSV出力</button>
+            </div>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <!-- 4. 設定・バックアップ -->
+    <div id="tab-settings" class="tab-content">
+        <div class="card">
+            <div class="card-title">⚙️ マイ店舗設定</div>
+            <div class="input-group"><label>設定名</label><input type="text" id="store-name" value="マイホA (46スロ)"></div>
+            <div class="input-group">
+                <label>種別</label>
+                <select id="type-select">
+                    <option value="slot">パチスロ (枚)</option>
+                    <option value="pachi">パチンコ (玉)</option>
+                </select>
+            </div>
+            <div class="input-group"><label>貸出レート</label><input type="number" id="rent-rate" value="46"></div>
+            <div class="input-group"><label>交換レート</label><input type="number" id="exchange-rate" value="5.1" step="0.1"></div>
+            <div class="card-title" style="margin-top: 14px;">特殊景品の設定</div>
+            <div class="custom-prize-grid">
+                <div class="input-group"><label>大景品 (円)</label><input type="number" id="val-large" value="5000"></div>
+                <div class="input-group"><label>必要数</label><input type="number" id="req-large" value="253"></div>
+                <div class="input-group"><label>中景品 (円)</label><input type="number" id="val-medium" value="1000"></div>
+                <div class="input-group"><label>必要数</label><input type="number" id="req-medium" value="51"></div>
+                <div class="input-group"><label>小景品 (円)</label><input type="number" id="val-small" value="200"></div>
+                <div class="input-group"><label>必要数</label><input type="number" id="req-small" value="10"></div>
+            </div>
+            <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn btn-primary" onclick="saveStoreConfig()">店舗設定を保存</button>
+                <button class="btn btn-danger" onclick="deleteStoreConfig()">店舗を削除</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💾 データバックアップ・復元</div>
+            <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom: 10px;">
+                機種変更やブラウザのデータクリア対策として、収支データをファイルに保存したり、復元したりできます。
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="exportJSON()">データを保存 (JSON)</button>
+                <label class="btn btn-success" style="display:inline-block; text-align:center; cursor:pointer; padding:12px; margin:0; font-size:0.9rem;">
+                    復元する
+                    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- カレンダー日付編集モーダル -->
+    <div class="modal-overlay" id="cal-modal">
+        <div class="modal-content">
+            <div class="card-title" id="modal-date-title">日付の収支管理</div>
+            <div id="modal-day-records" style="margin-bottom: 12px;"></div>
+            
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
+                <div style="font-size: 0.75rem; color: var(--accent-gold); font-weight: bold; margin-bottom: 6px;">➕ この日にクイック追加</div>
+                <div class="input-group">
+                    <label>収支金額 (円 ※マイナスなら-5000など)</label>
+                    <input type="number" id="modal-add-profit" placeholder="例: 15000 または -5000" inputmode="numeric">
+                </div>
+                <div class="input-group">
+                    <label>機種名・メモ</label>
+                    <input type="text" id="modal-add-memo" placeholder="例: マイジャグラー">
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-success" onclick="addRecordFromModal()">追加する</button>
+                    <button class="btn btn-danger" onclick="closeModal()">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
-        let records = JSON.parse(localStorage.getItem('pachi_records') || '[]');
-        let currentFilter = 'month';
-        let currentView = 'calendar';
-        let currentCalcMode = 'direct';
-        let currentDate = new Date();
-        let bgChartInstance = null;
+        const $ = id => document.getElementById(id);
 
-        document.getElementById('input-date').valueAsDate = new Date();
+        const defaultStores = [
+            { name: "46スロ(5.1枚交換店)", type: "slot", rent: 46, exchange: 5.1, valL: 5000, reqL: 253, valM: 1000, reqM: 51, valS: 200, reqS: 10 },
+            { name: "50スロ(等価店)", type: "slot", rent: 50, exchange: 5.0, valL: 5000, reqL: 250, valM: 1000, reqM: 50, valS: 200, reqS: 10 },
+            { name: "4パチ(28玉交換店)", type: "pachi", rent: 250, exchange: 28, valL: 5000, reqL: 1400, valM: 1000, reqM: 280, valS: 200, reqS: 56 }
+        ];
 
-        function setFilter(filter) {
-            currentFilter = filter;
-            ['month', 'year', 'all'].forEach(f => {
-                const btn = document.getElementById(`btn-${f}`);
-                if (f === filter) {
-                    btn.className = "px-2.5 py-1 rounded-md transition font-medium bg-emerald-500 text-white shadow-sm";
-                } else {
-                    btn.className = "px-2.5 py-1 rounded-md transition font-medium text-slate-400 hover:text-slate-200";
-                }
-            });
-            updateStats();
+        let stores = [];
+        let records = [];
+        let currentCalDate = new Date();
+        let statsFilterMode = 'year';
+        let selectedModalDate = '';
+
+        function initApp() {
+            try {
+                const savedStores = localStorage.getItem('pachi_stores_v3');
+                stores = savedStores ? JSON.parse(savedStores) : defaultStores;
+                const savedRecords = localStorage.getItem('pachi_records_v1');
+                records = savedRecords ? JSON.parse(savedRecords) : [];
+            } catch (e) {
+                stores = defaultStores;
+                records = [];
+            }
+            $('log-date-input').value = new Date().toISOString().split('T')[0];
+            $('current-year-label').innerText = new Date().getFullYear();
+            updateStoreSelect();
+            updateFilterDropdowns();
+            if (stores.length > 0) loadStoreByIndex(0);
+            calculate();
+            renderHistory();
+            renderStats();
+            renderCalendar();
         }
 
-        function setViewMode(mode) {
-            currentView = mode;
-            const btnCal = document.getElementById('view-btn-calendar');
-            const btnList = document.getElementById('view-btn-list');
-            const viewCal = document.getElementById('view-calendar');
-            const viewList = document.getElementById('view-list');
-
-            if (mode === 'calendar') {
-                btnCal.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-sm";
-                btnList.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
-                viewCal.classList.remove('hidden');
-                viewList.classList.add('hidden');
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            $(`tab-${tabName}`).classList.add('active');
+            if (tabName === 'calendar') {
                 renderCalendar();
-            } else {
-                btnList.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-sm";
-                btnCal.className = "flex-1 py-2 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200";
-                viewList.classList.remove('hidden');
-                viewCal.classList.add('hidden');
-                renderList();
+                renderStats();
+            }
+            if (tabName === 'history') {
+                updateFilterDropdowns();
+                renderHistory();
             }
         }
 
-        function setCalcMode(mode) {
-            currentCalcMode = mode;
-            const btnDirect = document.getElementById('mode-direct');
-            const btnCount = document.getElementById('mode-count');
-            const secDirect = document.getElementById('section-direct');
-            const secCount = document.getElementById('section-count');
-
-            if (mode === 'direct') {
-                btnDirect.className = "flex-1 py-1.5 rounded-lg transition font-medium bg-slate-700 text-slate-100 shadow-sm";
-                btnCount.className = "flex-1 py-1.5 rounded-lg transition font-medium text-slate-400 hover:text-slate-200";
-                secDirect.classList.remove('hidden');
-                secCount.classList.add('hidden');
+        function setStatsFilter(mode) {
+            statsFilterMode = mode;
+            if (mode === 'year') {
+                $('btn-filter-year').classList.add('active-filter');
+                $('btn-filter-all').classList.remove('active-filter');
             } else {
-                btnCount.className = "flex-1 py-1.5 rounded-lg transition font-medium bg-slate-700 text-slate-100 shadow-sm";
-                btnDirect.className = "flex-1 py-1.5 rounded-lg transition font-medium text-slate-400 hover:text-slate-200";
-                secCount.classList.remove('hidden');
-                secDirect.classList.add('hidden');
+                $('btn-filter-all').classList.add('active-filter');
+                $('btn-filter-year').classList.remove('active-filter');
             }
+            renderStats();
         }
 
-        function getFilteredRecords() {
-            const now = new Date();
-            return records.filter(r => {
-                const d = new Date(r.date);
-                if (currentFilter === 'month') {
-                    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-                } else if (currentFilter === 'year') {
-                    return d.getFullYear() === now.getFullYear();
-                }
-                return true;
+        function updateStoreSelect() {
+            const select = $('store-select');
+            select.innerHTML = '';
+            stores.forEach((store, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = store.name;
+                select.appendChild(opt);
             });
         }
 
-        function updateStats() {
-            const filtered = getFilteredRecords();
-            const total = filtered.reduce((acc, r) => acc + r.balance, 0);
-            const totalInvest = filtered.reduce((acc, r) => acc + r.invest, 0);
-            const totalCollect = filtered.reduce((acc, r) => acc + r.collect, 0);
-            const wins = filtered.filter(r => r.balance > 0).length;
+        function updateFilterDropdowns() {
+            const storeSelect = $('filter-store');
+            const memoSelect = $('filter-memo');
+            const currentStoreVal = storeSelect.value;
+            const currentMemoVal = memoSelect.value;
 
-            const balEl = document.getElementById('total-balance');
-            balEl.textContent = `${total >= 0 ? '+' : ''}${total.toLocaleString()}円`;
-            balEl.className = `text-3xl font-black tracking-tight ${total >= 0 ? 'plus-color' : 'minus-color'}`;
+            const storesList = [...new Set(records.map(r => r.store))];
+            const memosList = [...new Set(records.map(r => r.memo).filter(m => m))];
 
-            document.getElementById('stat-days').textContent = `${filtered.length}日`;
-            document.getElementById('stat-winrate').textContent = filtered.length ? `${Math.round((wins / filtered.length) * 100)}%` : '0%';
-            document.getElementById('stat-recovery').textContent = totalInvest ? `${Math.round((totalCollect / totalInvest) * 100)}%` : '0%';
+            storeSelect.innerHTML = '<option value="">すべての店舗</option>' + storesList.map(s => `<option value="${s}">${s}</option>`).join('');
+            memoSelect.innerHTML = '<option value="">すべての機種</option>' + memosList.map(m => `<option value="${m}">${m}</option>`).join('');
 
-            if (currentView === 'calendar') renderCalendar();
-            else renderList();
+            storeSelect.value = currentStoreVal;
+            memoSelect.value = currentMemoVal;
         }
 
-        function changeMonth(delta) {
-            currentDate.setMonth(currentDate.getMonth() + delta);
+        function loadStoreByIndex(index) {
+            const store = stores[index];
+            if (!store) return;
+            $('store-name').value = store.name;
+            $('type-select').value = store.type;
+            $('input-label').innerText = store.type === 'slot' ? '獲得枚数 (枚)' : '獲得玉数 (玉)';
+            $('rent-rate').value = store.rent;
+            $('exchange-rate').value = store.exchange;
+            $('val-large').value = store.valL; $('req-large').value = store.reqL;
+            $('val-medium').value = store.valM; $('req-medium').value = store.reqM;
+            $('val-small').value = store.valS; $('req-small').value = store.reqS;
+        }
+
+        $('store-select').addEventListener('change', (e) => {
+            loadStoreByIndex(e.target.value);
+            calculate();
+        });
+
+        function addCount(num) { const i = $('count-input'); i.value = Math.max(0, (parseInt(i.value) || 0) + num); calculate(); }
+        function clearCount() { $('count-input').value = ''; calculate(); }
+        function addInvest(num) { const i = $('investment-input'); i.value = (parseInt(i.value) || 0) + num; calculate(); }
+        function clearInvest() { $('investment-input').value = ''; calculate(); }
+
+        const inputs = ['count-input', 'investment-input', 'rent-rate', 'exchange-rate', 'val-large', 'req-large', 'val-medium', 'req-medium', 'val-small', 'req-small'];
+        inputs.forEach(id => {
+            const el = $(id);
+            if (el) { el.addEventListener('input', calculate); el.addEventListener('change', calculate); }
+        });
+
+        function calculate() {
+            const count = parseInt($('count-input').value) || 0;
+            const invest = parseInt($('investment-input').value) || 0;
+            const valL = parseInt($('val-large').value) || 0, reqL = parseInt($('req-large').value) || 0;
+            const valM = parseInt($('val-medium').value) || 0, reqM = parseInt($('req-medium').value) || 0;
+            const valS = parseInt($('val-small').value) || 0, reqS = parseInt($('req-small').value) || 0;
+
+            let current = count;
+            const numL = reqL > 0 ? Math.floor(current / reqL) : 0; if (reqL > 0) current %= reqL;
+            const numM = reqM > 0 ? Math.floor(current / reqM) : 0; if (reqM > 0) current %= reqM;
+            const numS = reqS > 0 ? Math.floor(current / reqS) : 0; if (reqS > 0) current %= reqS;
+
+            const rest = current;
+            const totalMoney = (numL * valL) + (numM * valM) + (numS * valS);
+            const profit = totalMoney - invest;
+
+            $('exchange-total').innerText = '¥' + totalMoney.toLocaleString();
+            const profitEl = $('profit-loss');
+            profitEl.innerText = `差引収支: ${profit >= 0 ? '+' : ''}¥${profit.toLocaleString()}`;
+            profitEl.className = profit > 0 ? 'result-label plus' : (profit < 0 ? 'result-label minus' : 'result-label');
+
+            $('count-large').innerText = numL; $('count-medium').innerText = numM; $('count-small').innerText = numS; $('count-rest').innerText = rest;
+            $('label-large').innerText = `大 (${valL}円)`; $('label-medium').innerText = `中 (${valM}円)`; $('label-small').innerText = `小 (${valS}円)`;
+
+            const adviceEl = $('advice-text');
+            if (count === 0) adviceEl.innerText = '枚数または玉数を入力してください';
+            else if (reqS > 0 && rest > 0) adviceEl.innerText = `💡 あと ${reqS - rest} 枚/玉 で 小景品 (+¥${valS}) 追加可能！`;
+            else adviceEl.innerText = '✨ 端数なし！ピッタリ交換できます';
+        }
+
+        function saveRecordFromCalc() {
+            const invest = parseInt($('investment-input').value) || 0;
+            const count = parseInt($('count-input').value) || 0;
+            if (invest === 0 && count === 0) return alert('投資額または獲得数を入力してください');
+
+            const valL = parseInt($('val-large').value) || 0, reqL = parseInt($('req-large').value) || 0;
+            const valM = parseInt($('val-medium').value) || 0, reqM = parseInt($('req-medium').value) || 0;
+            const valS = parseInt($('val-small').value) || 0, reqS = parseInt($('req-small').value) || 0;
+
+            let current = count;
+            const numL = reqL > 0 ? Math.floor(current / reqL) : 0; if (reqL > 0) current %= reqL;
+            const numM = reqM > 0 ? Math.floor(current / reqM) : 0; if (reqM > 0) current %= reqM;
+            const numS = reqS > 0 ? Math.floor(current / reqS) : 0; if (reqS > 0) current %= reqS;
+            const payout = (numL * valL) + (numM * valM) + (numS * valS);
+
+            const storeName = stores[$('store-select').value]?.name || '不明';
+            const memo = $('log-memo-input').value.trim();
+            const recordDate = $('log-date-input').value || new Date().toISOString().split('T')[0];
+
+            records.unshift({
+                id: Date.now(),
+                date: recordDate,
+                store: storeName,
+                invest: invest,
+                payout: payout,
+                profit: payout - invest,
+                memo: memo
+            });
+
+            localStorage.setItem('pachi_records_v1', JSON.stringify(records));
+            updateFilterDropdowns();
+            renderHistory();
+            renderStats();
+            renderCalendar();
+
+            alert('収支表に記録しました！');
+            $('log-memo-input').value = '';
+        }
+
+        function changeMonth(diff) {
+            currentCalDate.setMonth(currentCalDate.getMonth() + diff);
             renderCalendar();
         }
 
         function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-
-            document.getElementById('calendar-month-title').textContent = `${year}年 ${month + 1}月`;
+            const year = currentCalDate.getFullYear();
+            const month = currentCalDate.getMonth();
+            $('cal-month-title').innerText = `${year}年 ${month + 1}月`;
 
             const firstDay = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
 
-            const container = document.getElementById('calendar-days');
-            container.innerHTML = '';
+            const grid = $('calendar-grid');
+            grid.innerHTML = ['日','月','火','水','木','金','土'].map(d => `<div class="cal-head">${d}</div>`).join('');
 
             for (let i = 0; i < firstDay; i++) {
-                container.appendChild(document.createElement('div'));
+                grid.innerHTML += `<div class="cal-day" style="opacity:0.2; cursor:default;"></div>`;
             }
 
-            const monthRecords = records.filter(r => {
-                const d = new Date(r.date);
-                return d.getFullYear() === year && d.getMonth() === month;
-            });
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayRecords = records.filter(r => r.date === dateStr);
+                const dayProfit = dayRecords.reduce((sum, r) => sum + r.profit, 0);
 
-            const dailyStats = {};
-            monthRecords.forEach(r => {
-                const day = new Date(r.date).getDate();
-                dailyStats[day] = (dailyStats[day] || 0) + r.balance;
-            });
-
-            for (let day = 1; day <= lastDate; day++) {
-                const cell = document.createElement('div');
-                const hasData = dailyStats[day] !== undefined;
-                const bal = dailyStats[day] || 0;
-
-                cell.className = `min-h-[52px] p-1 rounded-xl border flex flex-col justify-between transition ${
-                    hasData 
-                        ? (bal >= 0 ? 'bg-plus' : 'bg-minus') 
-                        : 'bg-slate-800/30 border-slate-800 text-slate-500'
-                }`;
-
-                cell.innerHTML = `
-                    <span class="font-semibold text-[10px] ${hasData ? 'text-slate-200' : ''}">${day}</span>
-                    ${hasData ? `<span class="text-[9px] font-bold ${bal >= 0 ? 'plus-color' : 'minus-color'} truncate">${bal > 0 ? '+' : ''}${Math.round(bal/1000)}k</span>` : ''}
-                `;
-
-                container.appendChild(cell);
-            }
-
-            renderBgChart(year, month, lastDate, dailyStats);
-        }
-
-        function renderBgChart(year, month, lastDate, dailyStats) {
-            const ctx = document.getElementById('bgChart').getContext('2d');
-            const labels = Array.from({length: lastDate}, (_, i) => i + 1);
-            
-            let cumulative = 0;
-            const data = labels.map(day => {
-                if (dailyStats[day] !== undefined) cumulative += dailyStats[day];
-                return cumulative;
-            });
-
-            if (bgChartInstance) bgChartInstance.destroy();
-
-            const isPositive = cumulative >= 0;
-            const strokeColor = isPositive ? '#10b981' : '#f43f5e';
-            const fillColor = isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)';
-
-            bgChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        borderColor: strokeColor,
-                        borderWidth: 2,
-                        backgroundColor: fillColor,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { display: false }
-                    }
+                let valHtml = '';
+                if (dayRecords.length > 0) {
+                    const colorClass = dayProfit > 0 ? 'plus' : (dayProfit < 0 ? 'minus' : '');
+                    valHtml = `<div class="cal-val ${colorClass}">${dayProfit >= 0 ? '+' : ''}${Math.round(dayProfit / 1000)}k</div>`;
                 }
-            });
+
+                grid.innerHTML += `
+                    <div class="cal-day" onclick="openDayModal('${dateStr}')">
+                        <div class="cal-date">${d}</div>
+                        ${valHtml}
+                    </div>
+                `;
+            }
+        }
+        function openDayModal(dateStr) {
+            selectedModalDate = dateStr;
+            $('modal-date-title').innerText = `📅 ${dateStr} の収支`;
+            
+            const dayRecords = records.filter(r => r.date === dateStr);
+            const container = $('modal-day-records');
+
+            if (dayRecords.length === 0) {
+                container.innerHTML = '<div style="font-size:0.75rem; color:var(--text-sub); text-align:center; padding:8px 0;">この日の記録はありません</div>';
+            } else {
+                container.innerHTML = dayRecords.map(r => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#0b0f19; padding:8px; border-radius:6px; margin-bottom:6px; border:1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:bold;">${r.store}</div>
+                            <div style="font-size:0.65rem; color:var(--text-sub);">${r.memo || 'メモなし'}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.85rem; font-weight:bold;" class="${r.profit > 0 ? 'plus' : (r.profit < 0 ? 'minus' : '')}">
+                                ${r.profit >= 0 ? '+' : ''}¥${r.profit.toLocaleString()}
+                            </div>
+                            <button onclick="deleteRecordFromModal(${r.id})" style="background:none; border:none; color:var(--accent-red); font-size:0.65rem; cursor:pointer;">削除</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            $('modal-add-profit').value = '';
+            $('modal-add-memo').value = '';
+            $('cal-modal').style.display = 'flex';
         }
 
-        function renderList() {
-            const container = document.getElementById('history-container');
-            const filtered = getFilteredRecords().sort((a, b) => new Date(b.date) - new Date(a.date));
+        function closeModal() {
+            $('cal-modal').style.display = 'none';
+        }
 
+        function addRecordFromModal() {
+            const profitInput = parseInt($('modal-add-profit').value);
+            if (isNaN(profitInput)) return alert('収支金額を入力してください');
+            const memo = $('modal-add-memo').value.trim();
+            const storeName = stores[0]?.name || 'マイ店舗';
+
+            const invest = profitInput < 0 ? Math.abs(profitInput) : 0;
+            const payout = profitInput > 0 ? profitInput : 0;
+
+            records.unshift({
+                id: Date.now(),
+                date: selectedModalDate,
+                store: storeName,
+                invest: invest,
+                payout: payout,
+                profit: profitInput,
+                memo: memo
+            });
+
+            localStorage.setItem('pachi_records_v1', JSON.stringify(records));
+            updateFilterDropdowns();
+            renderHistory();
+            renderStats();
+            renderCalendar();
+            openDayModal(selectedModalDate);
+        }
+
+        function deleteRecordFromModal(id) {
+            if (confirm('この記録を削除しますか？')) {
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem('pachi_records_v1', JSON.stringify(records));
+                updateFilterDropdowns();
+                renderHistory(); renderStats(); renderCalendar();
+                openDayModal(selectedModalDate);
+            }
+        }
+
+        function renderStats() {
+            const currentYearStr = new Date().getFullYear().toString();
+            const targetRecords = statsFilterMode === 'year' 
+                ? records.filter(r => r.date && r.date.startsWith(currentYearStr))
+                : records;
+
+            $('chart-title-text').innerText = statsFilterMode === 'year' ? `📈 ${currentYearStr}年の収支推移` : `📈 収支推移グラフ`;
+            $('stats-title-text').innerText = statsFilterMode === 'year' ? `📊 ${currentYearStr}年アナリティクス` : `📊 通算アナリティクス`;
+
+            if (targetRecords.length === 0) {
+                $('stat-total').innerText = '¥0'; $('stat-winrate').innerText = '0%';
+                $('stat-games').innerText = '0勝 0敗'; $('stat-avg').innerText = '¥0';
+                $('line-chart-container').innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px 0;">データがありません</div>';
+                return;
+            }
+
+            const totalProfit = targetRecords.reduce((sum, r) => sum + r.profit, 0);
+            const wins = targetRecords.filter(r => r.profit > 0).length;
+            const losses = targetRecords.filter(r => r.profit < 0).length;
+            const winRate = Math.round((wins / targetRecords.length) * 100);
+            const avgProfit = Math.round(totalProfit / targetRecords.length);
+
+            $('stat-total').innerText = `${totalProfit >= 0 ? '+' : ''}¥${totalProfit.toLocaleString()}`;
+            $('stat-total').className = `stat-val ${totalProfit >= 0 ? 'plus' : 'minus'}`;
+            $('stat-winrate').innerText = `${winRate}%`;
+            $('stat-games').innerText = `${wins}勝 ${losses}敗`;
+            $('stat-avg').innerText = `${avgProfit >= 0 ? '+' : ''}¥${avgProfit.toLocaleString()}`;
+
+            const recentAsc = [...targetRecords].slice(0, 8).reverse();
+            let runningTotal = 0;
+            const cumulativeData = recentAsc.map(r => {
+                runningTotal += r.profit;
+                return { date: r.date.slice(5), cumProfit: runningTotal };
+            });
+
+            const chartPointsData = [{ date: '開始', cumProfit: 0 }, ...cumulativeData];
+
+            const svgWidth = 320;
+            const svgHeight = 130;
+            const padding = 25;
+            const innerWidth = svgWidth - (padding * 2);
+            const innerHeight = svgHeight - (padding * 2);
+
+            const allCumValues = chartPointsData.map(d => d.cumProfit);
+            const maxP = Math.max(...allCumValues, 0);
+            const minP = Math.min(...allCumValues, 0);
+            const range = (maxP - minP) === 0 ? 10000 : (maxP - minP);
+
+            const points = chartPointsData.map((d, i) => {
+                const x = padding + (chartPointsData.length === 1 ? innerWidth / 2 : (innerWidth / (chartPointsData.length - 1)) * i);
+                const y = padding + innerHeight - ((d.cumProfit - minP) / range) * innerHeight;
+                return { x, y, profit: d.cumProfit, date: d.date };
+            });
+
+            let pathSvg = `<path d="M ${points.map(p => `${p.x},${p.y}`).join(' L ')} " fill="none" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+            const zeroY = padding + innerHeight - ((0 - minP) / range) * innerHeight;
+            let zeroLineSvg = `<line x1="${padding}" y1="${zeroY}" x2="${svgWidth - padding}" y2="${zeroY}" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1" opacity="0.5"/>`;
+
+            const circlesSvg = points.map((p, idx) => {
+                if (idx === 0) return `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#94a3b8"/>`;
+                const isPlus = p.profit >= 0;
+                const color = isPlus ? '#10b981' : '#ef4444';
+                const labelY = p.y < 25 ? p.y + 14 : p.y - 8;
+                const amtFormatted = p.profit < 0 ? `-${Math.round(Math.abs(p.profit) / 1000)}k` : `+${Math.round(p.profit / 1000)}k`;
+                return `
+                    <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="${color}" stroke="#0b0f19" stroke-width="2"/>
+                    <text x="${p.x}" y="${labelY}" fill="${isPlus ? '#34d399' : '#f87171'}" font-size="8.5" font-weight="bold" text-anchor="middle">${amtFormatted}</text>
+                `;
+            }).join('');
+
+            const chartHtml = `
+                <svg class="line-chart-svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+                    ${zeroLineSvg}
+                    ${pathSvg}
+                    ${circlesSvg}
+                </svg>
+                <div class="chart-labels-row">
+                    ${points.map(p => `<div class="chart-x-label">${p.date}</div>`).join('')}
+                </div>
+            `;
+
+            $('line-chart-container').innerHTML = chartHtml;
+        }
+
+        function renderHistory() {
+            const storeFilter = $('filter-store').value;
+            const memoFilter = $('filter-memo').value;
+
+            let filtered = records;
+            if (storeFilter) filtered = filtered.filter(r => r.store === storeFilter);
+            if (memoFilter) filtered = filtered.filter(r => r.memo === memoFilter);
+
+            $('history-count-label').innerText = `📜 実戦記録 (${filtered.length}件)`;
+
+            const container = $('history-list');
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">データが登録されていません</div>`;
+                container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:20px;">該当する記録がありません</div>';
                 return;
             }
 
             container.innerHTML = filtered.map(r => `
-                <div class="glass-card p-3 rounded-xl flex items-center justify-between text-xs">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-slate-400 font-mono">${r.date}</span>
-                            ${r.shop ? `<span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">${r.shop}</span>` : ''}
-                            ${r.machine ? `<span class="bg-emerald-950 text-emerald-300 border border-emerald-800/50 px-2 py-0.5 rounded text-[10px]">${r.machine}</span>` : ''}
-                        </div>
-                        ${r.memo ? `<div class="text-slate-400 text-[11px]">${r.memo}</div>` : ''}
+                <div class="log-item">
+                    <div>
+                        <div class="log-date">${r.date} | ${r.store}</div>
+                        <div class="log-memo">${r.memo ? r.memo : 'メモなし'}</div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <div class="text-right">
-                            <div class="font-bold text-sm ${r.balance >= 0 ? 'plus-color' : 'minus-color'}">
-                                ${r.balance >= 0 ? '+' : ''}${r.balance.toLocaleString()}円
-                            </div>
-                            <div class="text-[10px] text-slate-500">投 ${r.invest.toLocaleString()} / 回 ${r.collect.toLocaleString()}</div>
+                    <div style="text-align:right;">
+                        <div class="log-profit ${r.profit > 0 ? 'plus' : (r.profit < 0 ? 'minus' : '')}">
+                            ${r.profit >= 0 ? '+' : ''}¥${r.profit.toLocaleString()}
                         </div>
-                        <button onclick="deleteRecord('${r.id}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
+                        <button onclick="deleteRecord(${r.id})" style="background:none; border:none; color:var(--accent-red); font-size:0.7rem; cursor:pointer;">削除</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function saveRecord(e) {
-            e.preventDefault();
-            const date = document.getElementById('input-date').value;
-            const shop = document.getElementById('input-shop').value;
-            const machine = document.getElementById('input-machine').value;
-            const memo = document.getElementById('input-memo').value;
-
-            let invest = 0;
-            let collect = 0;
-
-            if (currentCalcMode === 'direct') {
-                invest = parseInt(document.getElementById('input-invest-yen').value) || 0;
-                collect = parseInt(document.getElementById('input-collect-yen').value) || 0;
-            } else {
-                invest = parseInt(document.getElementById('input-invest-count-yen').value) || 0;
-                const count = parseInt(document.getElementById('input-collect-count').value) || 0;
-                const rate = document.getElementById('input-rate').value;
-
-                if (rate === '20-46') collect = count * 21.73;
-                else if (rate === '20-50') collect = count * 20;
-                else if (rate === '5') collect = count * 5;
-                else if (rate === '4') collect = count * 4;
-                else if (rate === '1') collect = count * 1;
-
-                collect = Math.floor(collect);
-            }
-
-            const record = {
-                id: Date.now().toString(),
-                date, shop, machine, invest, collect,
-                balance: collect - invest,
-                memo
-            };
-
-            records.push(record);
-            localStorage.setItem('pachi_records', JSON.stringify(records));
-            closeModal();
-            updateStats();
-            document.getElementById('record-form').reset();
-            document.getElementById('input-date').valueAsDate = new Date();
-        }
-
         function deleteRecord(id) {
             if (confirm('この記録を削除しますか？')) {
                 records = records.filter(r => r.id !== id);
-                localStorage.setItem('pachi_records', JSON.stringify(records));
-                updateStats();
+                localStorage.setItem('pachi_records_v1', JSON.stringify(records));
+                updateFilterDropdowns();
+                renderHistory(); renderStats(); renderCalendar();
+            }
+        }
+
+        function saveStoreConfig() {
+            const name = $('store-name').value.trim() || '無題の店舗';
+            const newStore = {
+                name: name, type: $('type-select').value,
+                rent: parseFloat($('rent-rate').value) || 0, exchange: parseFloat($('exchange-rate').value) || 0,
+                valL: parseInt($('val-large').value) || 0, reqL: parseInt($('req-large').value) || 0,
+                valM: parseInt($('val-medium').value) || 0, reqM: parseInt($('req-medium').value) || 0,
+                valS: parseInt($('val-small').value) || 0, reqS: parseInt($('req-small').value) || 0,
+            };
+            const existingIndex = stores.findIndex(s => s.name === name);
+            if (existingIndex >= 0) stores[existingIndex] = newStore;
+            else stores.push(newStore);
+
+            localStorage.setItem('pachi_stores_v3', JSON.stringify(stores));
+            updateStoreSelect();
+            alert(`「${name}」の設定を保存しました！`);
+        }
+
+        function deleteStoreConfig() {
+            const currentIndex = parseInt($('store-select').value);
+            if (stores.length <= 1) return alert('これ以上削除できません。');
+            if (confirm(`「${stores[currentIndex].name}」を削除しますか？`)) {
+                stores.splice(currentIndex, 1);
+                localStorage.setItem('pachi_stores_v3', JSON.stringify(stores));
+                updateStoreSelect(); loadStoreByIndex(0); calculate();
             }
         }
 
         function exportCSV() {
-            if (records.length === 0) return alert('出力するデータがありません。');
-            
-            const headers = ['日付', '店舗名', '機種名', '投資額(円)', '回収額(円)', '収支(円)', 'メモ'];
-            const rows = records.map(r => [
-                r.date,
-                `"${r.shop || ''}"`,
-                `"${r.machine || ''}"`,
-                r.invest,
-                r.collect,
-                r.balance,
-                `"${r.memo || ''}"`
-            ]);
-
-            const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `収支管理_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
+            if (records.length === 0) return alert('出力するデータがありません');
+            let csv = "日付,店舗,投資,回収,収支,メモ\n";
+            records.forEach(r => { csv += `${r.date},"${r.store}",${r.invest},${r.payout},${r.profit},"${r.memo}"\n`; });
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `pachi_records_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
         }
 
-        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        function exportJSON() {
+            if (records.length === 0 && stores.length === 0) return alert('バックアップするデータがありません');
+            const backupData = { stores: stores, records: records, version: 1, date: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `pachi_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
 
-        // 初期化処理
-        setFilter('month');
-        setViewMode('calendar');
-        setCalcMode('direct');
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.records && data.stores) {
+                        if (confirm(`バックアップデータを読み込みますか？現在のデータに上書きされます。`)) {
+                            stores = data.stores;
+                            records = data.records;
+                            localStorage.setItem('pachi_stores_v3', JSON.stringify(stores));
+                            localStorage.setItem('pachi_records_v1', JSON.stringify(records));
+                            updateStoreSelect();
+                            updateFilterDropdowns();
+                            if (stores.length > 0) loadStoreByIndex(0);
+                            calculate();
+                            renderHistory();
+                            renderStats();
+                            renderCalendar();
+                            alert('データの復元が完了しました！');
+                        }
+                    } else {
+                        alert('無効なバックアップファイルです。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        initApp();
     </script>
 </body>
 </html>
